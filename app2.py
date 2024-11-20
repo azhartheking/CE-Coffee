@@ -1,9 +1,6 @@
 import streamlit as st
 import pandas as pd
-import openpyxl
 from datetime import datetime, timedelta
-from openpyxl.chart import BarChart, Reference
-from openpyxl.drawing.image import Image
 import matplotlib.pyplot as plt
 import time
 
