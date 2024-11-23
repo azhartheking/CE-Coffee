@@ -1,8 +1,4 @@
 customer_name,coffee_type,size,add_ons,price,order_time
-adrish,Americano,Large,['Extra sugar'],5.0,2024-11-23 21:49:58.046511
-adrish,Americano,Medium,['Extra sugar'],5.0,2024-11-23 21:52:11.730784
-adrish try 2,Americano,Large,['Extra sugar'],5.0,2024-11-23 21:55:22.770354
-adrish,Americano,Medium,['Extra sugar'],5.0,2024-11-23 21:57:59.461906
 azhar,Americano,Large,['Milk'],5.0,2024-11-23 22:00:07.106123
 azhar,Americano,Large,['Milk'],5.0,2024-11-23 22:00:18.143510
 azhar,Americano,Large,['Milk'],5.0,2024-11-23 22:00:27.026431
