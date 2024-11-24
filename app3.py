@@ -119,7 +119,7 @@ def add_loyalty_points(customer_name, points):
 
 # Registration form
 if st.sidebar.button("Register New User"):
-    st.session_state["show_register_form"] = True
+    st.session_state["show_register_form"] = not st.session_state["show_register_form"]
 
 if st.session_state["show_register_form"]:
     with st.sidebar.form(key="register_form"):
@@ -140,7 +140,7 @@ if st.session_state["show_register_form"]:
 
 # Login form
 if st.sidebar.button("Login"):
-    st.session_state["show_login_form"] = True
+    st.session_state["show_login_form"] = not st.session_state["show_login_form"]
 
 if st.session_state["show_login_form"]:
     with st.sidebar.form(key="login_form"):
@@ -163,11 +163,11 @@ if st.session_state["show_login_form"]:
             else:
                 st.sidebar.error("Username not found. Please register first.")
 
-# Show admin login fields if "Admin" button was clicked
-if "is_admin" not in st.session_state:
-    st.session_state["is_admin"] = False
-
+# Admin login form
 if st.sidebar.button("Admin"):
+    st.session_state["show_admin_login_form"] = not st.session_state["show_admin_login_form"]
+
+if st.session_state["show_admin_login_form"]:
     with st.sidebar.form(key="admin_login_form"):
         st.subheader("Admin Login")
         username = st.text_input("Username", key="admin_username")
@@ -178,6 +178,7 @@ if st.sidebar.button("Admin"):
                 st.session_state["logged_in"] = True
                 st.session_state["user_role"] = "admin"
                 st.sidebar.success("Admin Access Granted")
+                st.session_state["show_admin_login_form"] = False
             else:
                 st.sidebar.error("Invalid admin credentials.")
                 st.session_state["is_admin"] = False  # Reset admin flag if login fails
@@ -213,6 +214,20 @@ elif page == 'Order Now':
         coffee_size = st.radio("Choose Size", ("Small", "Medium", "Large"))
         add_ons = st.multiselect("Add-ons", ["Extra sugar", "Milk"])
 
+        # Calculate Total Price
+        base_price = menu[coffee_type]
+        total_price = base_price
+        if coffee_size == "Medium":
+            total_price += 1.00
+        elif coffee_size == "Large":
+            total_price += 2.00
+        if "Extra sugar" in add_ons:
+            total_price += 0.50
+        if "Milk" in add_ons:
+            total_price += 0.75
+
+        st.write(f"Total Price: ${total_price:.2f}")
+
         # Payment Integration before Order Placement
         st.subheader("Payment Integration")
         payment_method = st.selectbox("Choose Payment Method", ["Credit Card", "PayPal"])
@@ -223,7 +238,7 @@ elif page == 'Order Now':
                 "coffee_type": coffee_type,
                 "size": coffee_size,
                 "add_ons": add_ons,
-                "price": menu[coffee_type],
+                "price": total_price,
                 "order_time": datetime.now()
             }
             st.session_state["current_order"] = order
