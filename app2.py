@@ -147,24 +147,93 @@ if page == "Home":
         for promotion in promotions:
             st.markdown(promotion)
         st.write("Click below to join our membership and start enjoying the benefits!")
-        if st.button("Join Now",'Order Now'):
+        if st.button("Join Now"):
             st.success("Thank you for joining! You are now a valued member of our coffee shop family.")
 
 elif page == 'Order Now':
   #Display Order Site
-    if st.session_state['logged_in']:
-        st.session_state["is_customer"] = True
-        st.session_state["is_admin"] = False
-        st.session_state["logged_in"] = True
-        st.session_state["user_role"] = "customer"
+    if st.session_state['logged_in'] and st.session_state["user_role"] == "customer" :
+        # Customer Order Process
+        if st.session_state["logged_in"] and st.session_state["user_role"] == "customer":
+            st.subheader("Place Your Order")
+            customer_name = st.text_input("Enter Your Name")
+            coffee_type = st.selectbox("Select Coffee Type", list(menu.keys()))
+            coffee_size = st.radio("Choose Size", ("Small", "Medium", "Large"))
+            add_ons = st.multiselect("Add-ons", ["Extra sugar", "Milk"])
+
+            # Payment Integration before Order Placement
+            st.subheader("Payment Integration")
+            payment_method = st.selectbox("Choose Payment Method", ["Credit Card", "PayPal"])
+            if st.button("Confirm Payment"):
+                st.success("Payment successful!")
+                order = {
+                    "customer_name": customer_name,
+                    "coffee_type": coffee_type,
+                    "size": coffee_size,
+                    "add_ons": add_ons,
+                    "price": menu[coffee_type],
+                    "order_time": datetime.now()
+                }
+                st.session_state["current_order"] = order
+                st.session_state["order_history"].append(order)
+                save_order_history()
+                st.success(f"Order placed! Your coffee will be ready shortly. Order: {coffee_type} ({coffee_size})")
+
+                # Display the generated invoice and provide download option
+                st.subheader("Invoice")
+                invoice_text = generate_invoice(order)
+                st.text(invoice_text)
+                st.download_button(label="Download Invoice", data=invoice_text, file_name=f"invoice_{customer_name}.txt", mime="text/plain")
+
+                # Add loyalty points (e.g., 1 point per $1 spent)
+                points_earned = int(order["price"])
+                add_loyalty_points(customer_name, points_earned)
+                st.info(f"{points_earned} loyalty points added. Total points: {st.session_state['loyalty_points'].get(customer_name, 0)}")
+
+                # Update Inventory based on order (basic example)
+                st.session_state["inventory"]["coffee_beans"] -= 10  # Adjust amount as per recipe
+                st.session_state["inventory"]["cups"] -= 1
+
+                # Start countdown for order preparation
+                for i in range(5, 0, -1):
+                    st.info(f"Your order will be ready in {i} seconds...")
+                    time.sleep(1)
+                st.success(f"{st.session_state['current_order']['customer_name']}, your {st.session_state['current_order']['coffee_type']} is ready!")
+
+                # Set rating submission flag to False for new rating submission
+                st.session_state["rating_submitted"] = False
+
+            # Collect customer rating and feedback after the coffee is ready
+            if st.session_state["current_order"] and not st.session_state["rating_submitted"]:
+                st.subheader("Rate Your Experience")
+                rating = st.slider("Rate your coffee (1-5)", min_value=1, max_value=5, key="rating_slider")
+                feedback = st.text_area("Leave your feedback", key="feedback_area")
+                if st.button("Submit Rating"):
+                    st.session_state["ratings"].append({"Customer": customer_name, "Rating": rating, "Feedback": feedback})
+                    save_ratings()
+                    st.success("Thank you for your feedback!")
+                    st.session_state["rating_submitted"] = True
     else:
         st.text('Acces Denied, Please Choose Your Role at The Navigation Bar')
             
 
 elif page == 'About Us':
     #Display Groupmates Names and etc
-    st.title('We are from group Brewmate')
-    st.subheader('This is our group')
+    st.title("About BrewMate")
+    st.write("BrewMate is a coffee shop dedicated to providing the best coffee experience. We offer a variety of handcrafted beverages, each made with care and passion. Our goal is to create a welcoming environment for all our customers, where great coffee and community come together.")
+    # Team pictures
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.image('azhar.jpg', caption='Azhar Ali, Founder', use_column_width=True)
+    with col2:
+        st.image('ad.jpg', caption='Adrish Elnes, Co-Founder', use_column_width=True)
+    with col3:
+        st.image('bolo.jpg', caption='Nabilah Shamshir, Accountant', use_column_width=True)
+    col4, col5 = st.columns(2)
+    with col4:
+        st.image('vv.jpg', caption='Vivian Hwong, Manager', use_column_width=True)
+    with col5:
+        st.image('dio.jpg', caption='Diocleciana, Executive Chef', use_column_width=True)
 
 elif page == 'Contact Us':
     st.title('Contact Us')
@@ -247,64 +316,3 @@ elif page == "Admin Panel" and st.session_state["logged_in"] and st.session_stat
         st.dataframe(ratings_df)
         avg_rating = ratings_df["Rating"].mean()
         st.write(f"Average Rating: {avg_rating:.2f} / 5")
-
-# Customer Order Process
-if st.session_state["logged_in"] and st.session_state["user_role"] == "customer":
-    st.subheader("Place Your Order")
-    customer_name = st.text_input("Enter Your Name")
-    coffee_type = st.selectbox("Select Coffee Type", list(menu.keys()))
-    coffee_size = st.radio("Choose Size", ("Small", "Medium", "Large"))
-    add_ons = st.multiselect("Add-ons", ["Extra sugar", "Milk"])
-
-    # Payment Integration before Order Placement
-    st.subheader("Payment Integration")
-    payment_method = st.selectbox("Choose Payment Method", ["Credit Card", "PayPal"])
-    if st.button("Confirm Payment"):
-        st.success("Payment successful!")
-        order = {
-            "customer_name": customer_name,
-            "coffee_type": coffee_type,
-            "size": coffee_size,
-            "add_ons": add_ons,
-            "price": menu[coffee_type],
-            "order_time": datetime.now()
-        }
-        st.session_state["current_order"] = order
-        st.session_state["order_history"].append(order)
-        save_order_history()
-        st.success(f"Order placed! Your coffee will be ready shortly. Order: {coffee_type} ({coffee_size})")
-
-        # Display the generated invoice and provide download option
-        st.subheader("Invoice")
-        invoice_text = generate_invoice(order)
-        st.text(invoice_text)
-        st.download_button(label="Download Invoice", data=invoice_text, file_name=f"invoice_{customer_name}.txt", mime="text/plain")
-
-        # Add loyalty points (e.g., 1 point per $1 spent)
-        points_earned = int(order["price"])
-        add_loyalty_points(customer_name, points_earned)
-        st.info(f"{points_earned} loyalty points added. Total points: {st.session_state['loyalty_points'].get(customer_name, 0)}")
-
-        # Update Inventory based on order (basic example)
-        st.session_state["inventory"]["coffee_beans"] -= 10  # Adjust amount as per recipe
-        st.session_state["inventory"]["cups"] -= 1
-
-        # Start countdown for order preparation
-        for i in range(5, 0, -1):
-            st.info(f"Your order will be ready in {i} seconds...")
-            time.sleep(1)
-        st.success(f"{st.session_state['current_order']['customer_name']}, your {st.session_state['current_order']['coffee_type']} is ready!")
-
-        # Set rating submission flag to False for new rating submission
-        st.session_state["rating_submitted"] = False
-
-    # Collect customer rating and feedback after the coffee is ready
-    if st.session_state["current_order"] and not st.session_state["rating_submitted"]:
-        st.subheader("Rate Your Experience")
-        rating = st.slider("Rate your coffee (1-5)", min_value=1, max_value=5, key="rating_slider")
-        feedback = st.text_area("Leave your feedback", key="feedback_area")
-        if st.button("Submit Rating"):
-            st.session_state["ratings"].append({"Customer": customer_name, "Rating": rating, "Feedback": feedback})
-            save_ratings()
-            st.success("Thank you for your feedback!")
-            st.session_state["rating_submitted"] = True
