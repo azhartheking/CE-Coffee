@@ -6,6 +6,13 @@ from openpyxl.drawing.image import Image
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import time
+import os
+import altair as alt
+
+# File paths
+ORDER_HISTORY_FILE = 'order_history.csv'
+LOYALTY_POINTS_FILE = 'loyalty_points.csv'
+RATINGS_FILE = 'ratings.csv'
 
 # Initialize data (mock data for menu and inventory)
 menu = {
@@ -24,23 +31,55 @@ default_inventory = {
 
 # Initialize session state for order history, inventory, login status, loyalty points, and ratings
 if "order_history" not in st.session_state:
-    st.session_state["order_history"] = []
+    if os.path.exists(ORDER_HISTORY_FILE):
+        st.session_state["order_history"] = pd.read_csv(ORDER_HISTORY_FILE).to_dict(orient='records')
+    else:
+        st.session_state["order_history"] = []
+
 if "inventory" not in st.session_state:
     st.session_state["inventory"] = default_inventory.copy()
+
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
+
 if "user_role" not in st.session_state:
     st.session_state["user_role"] = None
+
 if "is_customer" not in st.session_state:
     st.session_state["is_customer"] = False
+
 if "is_admin" not in st.session_state:
     st.session_state["is_admin"] = False
+
 if "loyalty_points" not in st.session_state:
-    st.session_state["loyalty_points"] = {}
+    if os.path.exists(LOYALTY_POINTS_FILE):
+        st.session_state["loyalty_points"] = pd.read_csv(LOYALTY_POINTS_FILE, index_col=0).to_dict()['Points']
+    else:
+        st.session_state["loyalty_points"] = {}
+
 if "ratings" not in st.session_state:
-    st.session_state["ratings"] = []
+    if os.path.exists(RATINGS_FILE):
+        st.session_state["ratings"] = pd.read_csv(RATINGS_FILE).to_dict(orient='records')
+    else:
+        st.session_state["ratings"] = []
+
 if "current_order" not in st.session_state:
     st.session_state["current_order"] = None
+
+if "rating_submitted" not in st.session_state:
+    st.session_state["rating_submitted"] = False
+
+# Function to save order history to CSV
+def save_order_history():
+    pd.DataFrame(st.session_state["order_history"]).to_csv(ORDER_HISTORY_FILE, index=False)
+
+# Function to save loyalty points to CSV
+def save_loyalty_points():
+    pd.DataFrame(list(st.session_state["loyalty_points"].items()), columns=["Customer", "Points"]).to_csv(LOYALTY_POINTS_FILE, index=False)
+
+# Function to save ratings to CSV
+def save_ratings():
+    pd.DataFrame(st.session_state["ratings"]).to_csv(RATINGS_FILE, index=False)
 
 # Function to add loyalty points
 def add_loyalty_points(customer_name, points):
@@ -48,6 +87,7 @@ def add_loyalty_points(customer_name, points):
         st.session_state["loyalty_points"][customer_name] += points
     else:
         st.session_state["loyalty_points"][customer_name] = points
+    save_loyalty_points()
 
 # Function to generate an invoice
 def generate_invoice(order):
@@ -60,7 +100,7 @@ def generate_invoice(order):
     Add-ons: {', '.join(order['add_ons']) if order['add_ons'] else 'None'}
     Total Price: ${order['price']:.2f}
     Order Time: {order['order_time']}
-    """.encode("utf-8")
+    """
 
 # Role selection buttons
 st.sidebar.write("Select your role:")
@@ -92,12 +132,14 @@ if st.session_state["is_admin"]:
 st.sidebar.title("BrewMate App Navigation")
 
 # Sidebar for navigation
-page = st.sidebar.radio("Go to", ("Home", "About Us", "Contact Us", "Admin Panel"))
+if st.session_state["logged_in"] and st.session_state["user_role"] == "admin":
+    page = st.sidebar.radio("Go to", ("Home",'Order Now', "About Us", "Contact Us", "Admin Panel"))
+else:
+    page = st.sidebar.radio("Go to", ("Home",'Order Now', "About Us", "Contact Us"))
 
 # Display appropriate page based on selection
 if page == "Home":
     # Display promotions page if user is not logged in
-    if not st.session_state["logged_in"]:
         st.title("Welcome to BrewMate!")
         st.subheader("Exclusive Promotions and Benefits!")
         st.image("https://images.unsplash.com/photo-1511920170033-f8396924c348", use_column_width=True)
@@ -105,33 +147,29 @@ if page == "Home":
         for promotion in promotions:
             st.markdown(promotion)
         st.write("Click below to join our membership and start enjoying the benefits!")
-        if st.button("Join Now"):
+        if st.button("Join Now",'Order Now'):
             st.success("Thank you for joining! You are now a valued member of our coffee shop family.")
 
-elif page == "About Us":
-    st.title("About BrewMate")
-    st.write("BrewMate is a coffee shop dedicated to providing the best coffee experience. We offer a variety of handcrafted beverages, each made with care and passion. Our goal is to create a welcoming environment for all our customers, where great coffee and community come together.")
-    # Team pictures
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.image('azhar.jpg', caption='Azhar Ali, Founder', use_column_width=True)
-    with col2:
-        st.image('adrish.jpg', caption='Adrish Elnes, Co-Founder', use_column_width=True)
-    with col3:
-        st.image('bolo.jpg', caption='Nabilah Shamshir, Accountant', use_column_width=True)
-    col4, col5 = st.columns(2)
-    with col4:
-        st.image('vv.jpg', caption='Vivian Hwong, Manager', use_column_width=True)
-    with col5:
-        st.image('dio.jpg', caption='Diocleciana, Executive Chef', use_column_width=True)
+elif page == 'Order Now':
+  #Display Order Site
+    if st.session_state['logged_in']:
+        st.session_state["is_customer"] = True
+        st.session_state["is_admin"] = False
+        st.session_state["logged_in"] = True
+        st.session_state["user_role"] = "customer"
+    else:
+        st.text('Acces Denied, Please Choose Your Role at The Navigation Bar')
+            
 
-elif page == "Contact Us":
-    st.title("Contact BrewMate")
-    st.write("Have questions or feedback? We'd love to hear from you!")
-    st.write("You can reach us at: info@brewmate.com or call us at +123-456-7890.")
-    st.text_area("Leave us a message:")
-    if st.button("Send Message"):
-        st.success("Thank you for reaching out to us! We'll get back to you shortly.")
+elif page == 'About Us':
+    #Display Groupmates Names and etc
+    st.title('We are from group Brewmate')
+    st.subheader('This is our group')
+
+elif page == 'Contact Us':
+    st.title('Contact Us')
+    st.subheader('Our contact information')
+    st.text('Email us at Azhario123@gmail.com')
 
 elif page == "Admin Panel" and st.session_state["logged_in"] and st.session_state["user_role"] == "admin":
     st.title("Admin Panel")
@@ -195,7 +233,7 @@ elif page == "Admin Panel" and st.session_state["logged_in"] and st.session_stat
         least_selling = sales_summary.idxmin()
         st.write(f"Best Selling Product: {best_selling}")
         st.write(f"Least Selling Product: {least_selling}")
-        st.bar_chart(sales_summary, use_container_width=True, title="Product Sales Performance")
+        st.bar_chart(sales_summary, use_container_width=True)
 
     # Display loyalty points summary
     st.subheader("Loyalty Points Summary")
@@ -233,7 +271,14 @@ if st.session_state["logged_in"] and st.session_state["user_role"] == "customer"
         }
         st.session_state["current_order"] = order
         st.session_state["order_history"].append(order)
+        save_order_history()
         st.success(f"Order placed! Your coffee will be ready shortly. Order: {coffee_type} ({coffee_size})")
+
+        # Display the generated invoice and provide download option
+        st.subheader("Invoice")
+        invoice_text = generate_invoice(order)
+        st.text(invoice_text)
+        st.download_button(label="Download Invoice", data=invoice_text, file_name=f"invoice_{customer_name}.txt", mime="text/plain")
 
         # Add loyalty points (e.g., 1 point per $1 spent)
         points_earned = int(order["price"])
@@ -249,3 +294,17 @@ if st.session_state["logged_in"] and st.session_state["user_role"] == "customer"
             st.info(f"Your order will be ready in {i} seconds...")
             time.sleep(1)
         st.success(f"{st.session_state['current_order']['customer_name']}, your {st.session_state['current_order']['coffee_type']} is ready!")
+
+        # Set rating submission flag to False for new rating submission
+        st.session_state["rating_submitted"] = False
+
+    # Collect customer rating and feedback after the coffee is ready
+    if st.session_state["current_order"] and not st.session_state["rating_submitted"]:
+        st.subheader("Rate Your Experience")
+        rating = st.slider("Rate your coffee (1-5)", min_value=1, max_value=5, key="rating_slider")
+        feedback = st.text_area("Leave your feedback", key="feedback_area")
+        if st.button("Submit Rating"):
+            st.session_state["ratings"].append({"Customer": customer_name, "Rating": rating, "Feedback": feedback})
+            save_ratings()
+            st.success("Thank you for your feedback!")
+            st.session_state["rating_submitted"] = True
