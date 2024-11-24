@@ -28,7 +28,7 @@ OpenPyXL: For managing data export to Excel files.
 
 Clone the repository:
 
-git clone https://github.com/yourusername/brewmate.git
+git clone https://github.com/yourusername/brewmate.git](https://github.com/azhartheking/CE-Coffee
 cd brewmate
 
 Install dependencies:
